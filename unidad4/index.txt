@@ -1,0 +1,49 @@
+<?php
+
+function loadTemplate($templateFileName, $variables = []){
+    extract($variables);
+
+    ob_start();
+
+    include __DIR__ . '/../templates/' . $templateFileName;
+
+    return ob_get_clean();
+}
+
+try{
+    include __DIR__ . '/../controllers/SingerController.php';
+
+    $singersTable = new DatabaseTable($pdo, 'singers', 'idsingers');
+    $authorsTable = new DatabaseTable($pdo, 'authors', 'id_author');
+
+    $singersController = new SingerController($singersTable, $authorsTable);
+
+    $action = $_GET['action'] ?? 'home';
+
+    if($action == strtolower($action)){
+        $singersController->$action();
+    }else{
+        http_response_code(301);
+        header('location: index.php?action=' . strtolower($action));
+    }
+
+    $page = $singersController->$action();
+
+    $title = $page['title'];
+
+    $variables = $page['variables'];
+
+    if(isset($page['variables'])){
+        $output = loadTemplate($page['template'],
+        $page['variables']);
+    }else{
+        $output = loadTemplate($page['template']);
+    }
+
+   
+
+}catch(PDOException $e){
+    $output = 'Unable to connect to the database server: '
+    . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+}
+include __DIR__ . '/../templates/layout.html.php';

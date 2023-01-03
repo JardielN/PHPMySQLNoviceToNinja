@@ -1,0 +1,55 @@
+<?php
+
+function loadTemplate($templateFileName, $variables = []){
+    extract($variables);
+
+    ob_start();
+
+    include __DIR__ . '/../templates/' . $templateFileName;
+
+    return ob_get_clean();
+}
+
+try{
+    
+    include __DIR__ . '/../classes/DatabaseTable.php';
+    include __DIR__ . '/../includes/DatabaseConnection.php';
+    include __DIR__  . '/../includes/DatabaseFunctions.php';
+    $singersTable = new DatabaseTable($pdo, 'singers', 'idsingers');
+    $authorsTable = new DatabaseTable($pdo, 'authors', 'id_author');
+
+    $action = $_GET['action'] ?? 'home';
+
+    $controllerName = $_GET['controller'] ?? 'singer';
+
+    if($action == strtolower($action) && $controllerName == strtolower($controllerName)){
+        $className = ucfirst($controllerName) . 'Controller';
+
+        include __DIR__ . '/../controllers/' .  $className . '.php';
+        $controller = new $className($singersTable, $authorsTable);
+        $page = $controller->$action();
+    }else{
+        http_response_code(301);
+        header('location: index.php?controller=' .
+        strtolower($controllerName) . '&action=' .
+        strtolower($action));
+    }
+
+    $title = $page['title'];
+
+    $variables = $page['variables'];
+
+    if(isset($page['variables'])){
+        $output = loadTemplate($page['template'],
+        $page['variables']);
+    }else{
+        $output = loadTemplate($page['template']);
+    }
+
+   
+
+}catch(PDOException $e){
+    $output = 'Unable to connect to the database server: '
+    . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+}
+include __DIR__ . '/../templates/layout.html.php';
